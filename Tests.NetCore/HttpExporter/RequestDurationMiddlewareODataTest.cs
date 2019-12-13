@@ -142,7 +142,7 @@ namespace Tests.HttpExporter
             var labels = histogram.GetAllLabels();
             var controllers = GetLabelValues(labels, HttpRequestLabelNames.Controller);
             
-            CollectionAssert.AreEquivalent(new[] { "AuthController(ItemKey=)" }, controllers);
+            CollectionAssert.AreEquivalent(new[] { "AuthController(ItemKey)" }, controllers);
         }
 
         [TestMethod]
@@ -163,7 +163,7 @@ namespace Tests.HttpExporter
             var labels = histogram.GetAllLabels();
             var controllers = GetLabelValues(labels, HttpRequestLabelNames.Controller);
             
-            CollectionAssert.AreEquivalent(new[] { "AuthController(Number=)" }, controllers);
+            CollectionAssert.AreEquivalent(new[] { "AuthController(Number)" }, controllers);
         }
 
         [TestMethod]
