@@ -167,6 +167,27 @@ namespace Tests.HttpExporter
         }
 
         [TestMethod]
+        public async Task Given_multiple_requests_populates_controller_label_correctly_parameter_matching_name()
+        {
+            var histogram = _factory.CreateHistogram("histogram", "", new HistogramConfiguration
+            {
+                Buckets = new[] { 0.1d, 1d, 10d },
+                LabelNames = new[] { HttpRequestLabelNames.Controller }
+            });
+            _sut = new HttpRequestDurationMiddleware(_requestDelegate, histogram);
+
+            await SetControllerAndInvoke(new RouteData
+            {
+                Values = { { "odataPath", "AuthController(ItemKey='Controller')" }, { "ItemKey", "Controller" } }
+            });
+
+            var labels = histogram.GetAllLabels();
+            var controllers = GetLabelValues(labels, HttpRequestLabelNames.Controller);
+
+            CollectionAssert.AreEquivalent(new[] { "AuthController(ItemKey)" }, controllers);
+        }
+
+        [TestMethod]
         public async Task Given_multiple_requests_populates_controller_label_correctly_no_key()
         {
             var histogram = _factory.CreateHistogram("histogram", "", new HistogramConfiguration
