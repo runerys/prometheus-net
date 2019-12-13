@@ -345,10 +345,12 @@ For "request duration" and "total request count", the labels for the custom metr
 
 * "code" - Status Code
 * "method" - HTTP method
-* "controller" - ASP.NET Core MVC Controller
-* "action" - ASP.NET Core MVC Action
+* "controller" - ASP.NET Core MVC controller name (with parameter names in case of OData)
+* "action" - ASP.NET Core MVC action name
 
 Any requests that do not match an ASP.NET Core MVC controller or action will have an empty string as the label value.
+
+If the controller is an OData Web API controller then the controller name will be structured as `Name(Param1,Param2)` (only the parameter names, no values).
 
 # ASP.NET Core with basic authentication
 

@@ -12,7 +12,8 @@ namespace Prometheus.HttpMetrics
     /// The metric used may have up to four labels (or none), which must be from the following:
     /// 'code' (HTTP status code)
     /// 'method' (HTTP request method)
-    /// 'controller' (The Controller used to fulfill the HTTP request)
+    /// 'controller' (The Controller used to fulfill the HTTP request;
+    ///     in case of OData this is Controller(ParamName,ParamName) taken from odataPath.
     /// 'action' (The Action used to fulfill the HTTP request)
     /// The 'code' and 'method' data are taken from the current HTTP context.
     /// Similarly, if either 'controller' or 'action' is provided, the data will be taken from the RouteData of
@@ -56,28 +57,43 @@ namespace Prometheus.HttpMetrics
                     routeData?.Values["Action"] as string ?? string.Empty);
                 UpdateMetricValueIfExists(HttpRequestLabelNames.Controller,
                     routeData?.Values["Controller"] as string ?? string.Empty);
+
                 if (routeData != null && routeData.Values.ContainsKey("odataPath"))
-                    HandleODataPath(routeData);
+                {
+                    // Only if there is no meaningful controller value already assigned.
+                    if (string.IsNullOrEmpty(routeData.Values["Controller"] as string))
+                        ExtractControllerStringFromODataPath(routeData);
+                }
                 
             }
 
             return _labelNames.Where(_labelData.ContainsKey).Select(x => _labelData[x]).ToArray();
         }
 
-        private void HandleODataPath(RouteData routeData)
+        private void ExtractControllerStringFromODataPath(RouteData routeData)
         {
             var controller = routeData.Values["odataPath"] as string ?? string.Empty;
-            //Remove the parameters from the odataPath to avoid getting too many entry points - Example Item('A00001') -> Item() | CopyFromItem(ItemKey='X') -> CopyFromItem(ItemKey=) | Transfer(Number=1) -> Transfer(Number=) 
-            foreach (var x in routeData.Values.Where(x => x.Key != "odataPath" && x.Key != "action").OrderByDescending(x => (x.Value as string ?? string.Empty).Length))
+
+            // Remove the parameters from the odataPath to avoid getting too many unique label values
+            // Example:
+            // Item('A00001') -> Item()
+            // CopyFromItem(ItemKey='X') -> CopyFromItem(ItemKey)
+            // Transfer(Number=1) -> Transfer(Number) 
+
+            // FIXME: CopyFromItem(Name='Item') -> CopyFrom(Name)
+            foreach (var x in routeData.Values.Where(x => x.Key != "odataPath" && x.Key != "action")
+                .OrderByDescending(x => (x.Value as string ?? string.Empty).Length))
             {
                 var value = x.Value as string ?? string.Empty;
                 if (value.Length > 0)
-                {
                     controller = controller.Replace(value, string.Empty);
-                }
             }
 
-            UpdateMetricValueIfExists(HttpRequestLabelNames.Controller, controller.Replace("'", string.Empty));
+            var controllerWithoutExtraPunctuation = controller
+                .Replace("'", string.Empty)
+                .Replace("=", string.Empty);
+
+            UpdateMetricValueIfExists(HttpRequestLabelNames.Controller, controllerWithoutExtraPunctuation);
         }
 
         private bool LabelsAreValid(string[] labelNames)
